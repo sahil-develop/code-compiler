@@ -449,9 +449,34 @@
     cursor: ns-resize;
     flex-shrink: 0;
     transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .resize-handle::after {
+    content: '';
+    width: 36px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border2);
+    transition: background 0.15s;
   }
 
   .resize-handle:hover { background: linear-gradient(90deg, #a277ff44, #61ffca44); }
+  .resize-handle:hover::after { background: var(--accent); }
+
+  @media (max-width: 768px) {
+    .resize-handle {
+      height: 22px;
+      touch-action: none;
+    }
+    .resize-handle::after {
+      width: 48px;
+      height: 4px;
+    }
+  }
 
   /* ── Toast ── */
   .toast {
