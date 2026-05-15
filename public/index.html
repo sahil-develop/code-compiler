@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- Primary SEO -->
+<title>CodeRunner — Online IDE for JavaScript, TypeScript &amp; Python</title>
+<meta name="description" content="Run JavaScript, TypeScript, and Python instantly in your browser. A fast, beautiful online code runner with Monaco editor, syntax highlighting, and snippet management." />
+<meta name="keywords" content="online code runner, javascript playground, typescript playground, python online, code editor, online IDE, monaco editor, run code online, DSA practice, algorithms, coding environment" />
+<meta name="author" content="CodeRunner" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="{{PUBLIC_URL}}/" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{PUBLIC_URL}}/" />
+<meta property="og:title" content="CodeRunner — Online IDE for JavaScript, TypeScript &amp; Python" />
+<meta property="og:description" content="Run JavaScript, TypeScript, and Python instantly in your browser. Beautiful Monaco editor, syntax highlighting, and snippet management." />
+<meta property="og:image" content="{{PUBLIC_URL}}/og-image.png" />
+<meta property="og:site_name" content="CodeRunner" />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="CodeRunner — Online IDE for JavaScript, TypeScript &amp; Python" />
+<meta name="twitter:description" content="Run JavaScript, TypeScript, and Python instantly in your browser." />
+<meta name="twitter:image" content="{{PUBLIC_URL}}/og-image.png" />
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='15' fill='%2315141b'/><polygon points='30,20 80,50 30,80' fill='%23a277ff'/></svg>" />
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#15141b" />
+
+<!-- Performance hints -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
+<link rel="dns-prefetch" href="https://emkc.org" />
+
+<!-- Structured data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "CodeRunner",
+  "url": "{{PUBLIC_URL}}/",
+  "description": "Run JavaScript, TypeScript, and Python code instantly in your browser.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Web",
+  "browserRequirements": "Requires JavaScript",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+}
+</script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.min.css" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #15141b;
+    --surface: #1c1b22;
+    --panel:   #201f27;
+    --border:  #2a2838;
+    --border2: #3a3850;
+    --text:    #edecee;
+    --muted:   #6d6a7c;
+    --accent:  #a277ff;
+    --teal:    #61ffca;
+    --pink:    #f694ff;
+    --amber:   #ffca85;
+    --blue:    #82e2ff;
+    --red:     #ff6767;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .topbar-title {
+    font-size: 13px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #a277ff, #61ffca);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.05em;
+    margin-right: 4px;
+    white-space: nowrap;
+  }
+
+  .lang-tabs { display: flex; gap: 2px; }
+
+  .lang-tab {
+    padding: 4px 11px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .lang-tab:hover { color: var(--text); }
+
+  .lang-tab.active {
+    color: var(--accent);
+    background: rgba(162,119,255,0.12);
+    border-color: rgba(162,119,255,0.35);
+  }
+
+  .spacer { flex: 1; }
+
+  /* Font size controls */
+  .font-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+
+  .font-btn {
+    padding: 4px 8px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+    line-height: 1;
+  }
+
+  .font-btn:hover { color: var(--accent); background: rgba(162,119,255,0.1); }
+
+  .font-size-label {
+    padding: 0 6px;
+    font-size: 11px;
+    color: var(--muted);
+    min-width: 28px;
+    text-align: center;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    line-height: 24px;
+  }
+
+  .btn {
+    padding: 5px 13px;
+    border-radius: 5px;
+    border: none;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .btn:hover { opacity: 0.88; }
+  .btn:active { opacity: 0.7; transform: scale(0.97); }
+
+  .btn-run {
+    background: linear-gradient(135deg, #a277ff 0%, #61ffca 100%);
+    color: #15141b;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  .btn-save {
+    background: rgba(162,119,255,0.1);
+    border: 1px solid rgba(162,119,255,0.3);
+    color: var(--accent);
+  }
+
+  .btn-icon {
+    padding: 5px 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  .btn-icon:hover { color: var(--accent); border-color: rgba(162,119,255,0.4); }
+
+  /* ── Main layout ── */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 230px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    flex-shrink: 0;
+    transition: width 0.2s;
+  }
+
+  .sidebar.collapsed { width: 0; overflow: hidden; }
+
+  .sidebar-header {
+    padding: 10px 12px 8px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Folder groups */
+  .snippet-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+  .snippet-list::-webkit-scrollbar { width: 3px; }
+  .snippet-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  .folder {
+    user-select: none;
+  }
+
+  .folder-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    transition: color 0.15s;
+  }
+
+  .folder-header:hover { color: var(--text); }
+
+  .folder-arrow {
+    font-size: 9px;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+
+  .folder.open .folder-arrow { transform: rotate(90deg); }
+
+  .folder-icon { font-size: 12px; }
+
+  .folder-label { flex: 1; text-transform: uppercase; }
+
+  .folder-count {
+    font-size: 10px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 1px 6px;
+    color: var(--muted);
+  }
+
+  .folder-items { display: none; }
+  .folder.open .folder-items { display: block; }
+
+  .snippet-item {
+    padding: 6px 12px 6px 26px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: background 0.1s;
+  }
+
+  .snippet-item:hover { background: rgba(162,119,255,0.06); }
+
+  .snippet-item.active {
+    border-left-color: var(--accent);
+    background: rgba(162,119,255,0.1);
+  }
+
+  .snippet-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .snippet-actions {
+    display: none;
+    align-items: center;
+    gap: 1px;
+    flex-shrink: 0;
+  }
+
+  .snippet-item:hover .snippet-actions { display: flex; }
+
+  .snippet-del,
+  .snippet-ren {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 1px 3px;
+    line-height: 1;
+    opacity: 0.6;
+    border-radius: 3px;
+    transition: opacity 0.15s, background 0.15s;
+  }
+
+  .snippet-del { color: var(--red); }
+  .snippet-ren { color: var(--accent); }
+
+  .snippet-del:hover { opacity: 1; background: rgba(255,103,103,0.12); }
+  .snippet-ren:hover { opacity: 1; background: rgba(162,119,255,0.15); }
+
+  .snippet-rename-input {
+    flex: 1;
+    background: rgba(162,119,255,0.1);
+    border: 1px solid rgba(162,119,255,0.5);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 1px 5px;
+    outline: none;
+    min-width: 0;
+  }
+
+  .sidebar-new {
+    padding: 8px 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .sidebar-new button {
+    width: 100%;
+    padding: 6px;
+    background: none;
+    border: 1px dashed var(--border2);
+    border-radius: 4px;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .sidebar-new button:hover {
+    color: var(--accent);
+    border-color: rgba(162,119,255,0.5);
+    background: rgba(162,119,255,0.06);
+  }
+
+  /* ── Editor area ── */
+  .editor-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+
+  #snippet-title {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    flex: 1;
+    outline: none;
+  }
+
+  #snippet-title::placeholder { color: var(--muted); }
+
+  .editor-wrap { flex: 1; overflow: hidden; }
+
+  /* ── Output panel ── */
+  .output-panel {
+    height: 220px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .output-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    font-size: 11px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .output-status {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .output-status.ok  { background: var(--teal); box-shadow: 0 0 6px rgba(97,255,202,0.5); }
+  .output-status.err { background: var(--red);  box-shadow: 0 0 6px rgba(255,103,103,0.5); }
+  .output-status.running { background: var(--amber); animation: pulse 0.7s infinite; }
+
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
+
+  .output-content {
+    flex: 1;
+    overflow: auto;
+    padding: 10px 16px;
+    font-size: 12px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: var(--bg);
+  }
+
+  .output-content::-webkit-scrollbar { width: 3px; }
+  .output-content::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .out-stdout { color: var(--text); }
+  .out-stderr { color: var(--red); }
+  .out-meta   { color: var(--muted); font-size: 11px; }
+
+  /* ── Resize handle ── */
+  .resize-handle {
+    height: 4px;
+    background: transparent;
+    cursor: ns-resize;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+
+  .resize-handle:hover { background: linear-gradient(90deg, #a277ff44, #61ffca44); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--panel);
+    border: 1px solid rgba(162,119,255,0.4);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .toast.show { opacity: 1; }
+
+  /* ── Auth screen ── */
+  #auth-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  #auth-screen.hidden { display: none; }
+
+  .auth-card {
+    width: 340px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .auth-logo {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #a277ff, #61ffca);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+
+  .auth-tabs {
+    display: flex;
+    background: var(--panel);
+    border-radius: 7px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .auth-tab {
+    flex: 1;
+    padding: 6px;
+    background: none;
+    border: none;
+    border-radius: 5px;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .auth-tab.active {
+    background: var(--surface);
+    color: var(--accent);
+    border: 1px solid rgba(162,119,255,0.3);
+  }
+
+  .auth-fields { display: flex; flex-direction: column; gap: 10px; }
+
+  .auth-input {
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .auth-input:focus { border-color: rgba(162,119,255,0.6); }
+  .auth-input::placeholder { color: var(--muted); }
+
+  .auth-submit {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #a277ff, #61ffca);
+    border: none;
+    border-radius: 6px;
+    color: #15141b;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .auth-submit:hover  { opacity: 0.88; }
+  .auth-submit:active { transform: scale(0.98); }
+
+  .auth-error {
+    font-size: 12px;
+    color: var(--red);
+    text-align: center;
+    min-height: 16px;
+  }
+
+  /* user chip in topbar */
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px 3px 6px;
+    background: rgba(162,119,255,0.1);
+    border: 1px solid rgba(162,119,255,0.25);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .user-avatar {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a277ff, #61ffca);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #15141b;
+    flex-shrink: 0;
+  }
+
+  .btn-logout {
+    padding: 4px 10px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .btn-logout:hover { color: var(--red); border-color: rgba(255,103,103,0.4); }
+</style>
+</head>
+<body>
+
+<!-- Auth screen -->
+<div id="auth-screen" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+  <div class="auth-card">
+    <div class="auth-logo" id="auth-title">&#9654; CodeRunner</div>
+    <div class="auth-tabs" role="tablist" aria-label="Sign in or register">
+      <button class="auth-tab active" data-tab="login" role="tab" aria-selected="true">Sign in</button>
+      <button class="auth-tab" data-tab="register" role="tab" aria-selected="false">Register</button>
+    </div>
+    <div class="auth-fields">
+      <input class="auth-input" id="auth-username" type="text" placeholder="Username" autocomplete="username" maxlength="32" />
+      <input class="auth-input" id="auth-password" type="password" placeholder="Password" autocomplete="current-password" />
+    </div>
+    <div class="auth-error" id="auth-error" role="alert" aria-live="polite"></div>
+    <button class="auth-submit" id="auth-submit">Sign in</button>
+  </div>
+</div>
+
+<!-- Top bar -->
+<header class="topbar">
+  <span class="topbar-title" aria-label="CodeRunner">&#9654; CodeRunner</span>
+
+  <nav class="lang-tabs" role="tablist" aria-label="Programming language">
+    <button class="lang-tab active" data-lang="javascript" role="tab" aria-selected="true" aria-label="JavaScript">JS</button>
+    <button class="lang-tab" data-lang="typescript" role="tab" aria-selected="false" aria-label="TypeScript">TS</button>
+    <button class="lang-tab" data-lang="python" role="tab" aria-selected="false" aria-label="Python">PY</button>
+  </nav>
+
+  <div class="spacer"></div>
+
+  <div class="font-controls" role="group" aria-label="Font size">
+    <button class="font-btn" id="font-dec" title="Decrease font size" aria-label="Decrease font size">A&#8315;</button>
+    <span class="font-size-label" id="font-size-label" aria-label="Current font size: 13">13</span>
+    <button class="font-btn" id="font-inc" title="Increase font size" aria-label="Increase font size">A&#8314;</button>
+  </div>
+
+  <button class="btn btn-save" id="btn-save" aria-label="Save snippet (Ctrl+S)">Save</button>
+  <button class="btn btn-run" id="btn-run" aria-label="Run code (Ctrl+Enter)">&#9654; Run</button>
+  <div class="user-chip" id="user-chip">
+    <div class="user-avatar" id="user-avatar" aria-hidden="true">?</div>
+    <span id="user-name"></span>
+  </div>
+  <button class="btn-logout" id="btn-logout" aria-label="Sign out">Logout</button>
+  <button class="btn btn-icon" id="btn-toggle-sidebar" title="Toggle sidebar" aria-label="Toggle sidebar" aria-expanded="true">&#8942;</button>
+</header>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar" aria-label="Code snippets">
+    <div class="sidebar-header" role="heading" aria-level="2">Snippets</div>
+    <div class="snippet-list" id="snippet-list" role="list"></div>
+    <div class="sidebar-new">
+      <button id="btn-new" aria-label="Create new snippet">+ New snippet</button>
+    </div>
+  </aside>
+
+  <!-- Editor + output -->
+  <section class="editor-area" aria-label="Code editor">
+    <div class="title-row">
+      <input id="snippet-title" placeholder="Untitled" maxlength="80" aria-label="Snippet title" />
+    </div>
+    <div class="editor-wrap" id="editor-wrap" aria-label="Monaco code editor"></div>
+    <div class="resize-handle" id="resize-handle" role="separator" aria-orientation="horizontal" aria-label="Resize output panel"></div>
+    <section class="output-panel" id="output-panel" aria-label="Code output">
+      <div class="output-header">
+        <div class="output-status" id="output-status" aria-hidden="true"></div>
+        <span id="output-label">Output</span>
+        <div class="spacer"></div>
+        <span id="output-time" aria-label="Execution time"></span>
+      </div>
+      <div class="output-content" id="output-content" role="log" aria-live="polite" aria-label="Execution output"><span class="out-meta">Press Run (&#8984;&#8629;) to execute</span></div>
+    </section>
+  </section>
+
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+<script>
+// ── Auth ───────────────────────────────────────────────────────────────────────
+(function () {
+  const screen    = document.getElementById('auth-screen');
+  const tabs      = document.querySelectorAll('.auth-tab');
+  const submitBtn = document.getElementById('auth-submit');
+  const errorEl   = document.getElementById('auth-error');
+  let mode = 'login';
+
+  tabs.forEach(t => t.addEventListener('click', () => {
+    mode = t.dataset.tab;
+    tabs.forEach(x => {
+      const active = x.dataset.tab === mode;
+      x.classList.toggle('active', active);
+      x.setAttribute('aria-selected', active);
+    });
+    submitBtn.textContent = mode === 'login' ? 'Sign in' : 'Create account';
+    errorEl.textContent = '';
+  }));
+
+  async function doAuth(e) {
+    e && e.preventDefault();
+    errorEl.textContent = '';
+    const username = document.getElementById('auth-username').value.trim();
+    const password = document.getElementById('auth-password').value;
+    if (!username || !password) { errorEl.textContent = 'Fill in both fields'; return; }
+
+    const res  = await fetch(`/api/auth/${mode}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+
+    if (!res.ok) { errorEl.textContent = data.error || 'Something went wrong'; return; }
+    showUser(data.username);
+    screen.classList.add('hidden');
+  }
+
+  submitBtn.addEventListener('click', doAuth);
+  document.getElementById('auth-password').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
+  document.getElementById('auth-username').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('auth-password').focus(); });
+
+  function showUser(username) {
+    document.getElementById('user-name').textContent = username;
+    document.getElementById('user-avatar').textContent = username[0].toUpperCase();
+  }
+
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    location.reload();
+  });
+
+  // Check existing session
+  fetch('/api/auth/me').then(r => r.json()).then(d => {
+    if (d.user) {
+      showUser(d.user.username);
+      screen.classList.add('hidden');
+    }
+  });
+})();
+
+require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } });
+
+require(['vs/editor/editor.main'], function () {
+
+  // ── Aura Dark Monaco theme ──────────────────────────────────────────────
+  monaco.editor.defineTheme('aura-dark', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: '',                   foreground: 'edecee', background: '15141b' },
+      { token: 'comment',            foreground: '6d6a7c', fontStyle: 'italic' },
+      { token: 'keyword',            foreground: 'a277ff', fontStyle: 'bold' },
+      { token: 'keyword.operator',   foreground: '82e2ff' },
+      { token: 'keyword.control',    foreground: 'a277ff', fontStyle: 'bold' },
+      { token: 'string',             foreground: 'f694ff' },
+      { token: 'string.escape',      foreground: 'ffca85' },
+      { token: 'number',             foreground: 'ffca85' },
+      { token: 'number.float',       foreground: 'ffca85' },
+      { token: 'constant',           foreground: 'ffca85' },
+      { token: 'constant.numeric',   foreground: 'ffca85' },
+      { token: 'variable',           foreground: 'edecee' },
+      { token: 'variable.parameter', foreground: 'e1c0ff' },
+      { token: 'identifier',         foreground: 'edecee' },
+      { token: 'type',               foreground: '82e2ff' },
+      { token: 'type.identifier',    foreground: '82e2ff' },
+      { token: 'entity.name.type',   foreground: '82e2ff' },
+      { token: 'function',           foreground: '61ffca' },
+      { token: 'entity.name.function', foreground: '61ffca' },
+      { token: 'support.function',   foreground: '61ffca' },
+      { token: 'operator',           foreground: '89ddff' },
+      { token: 'delimiter',          foreground: '8b8fa8' },
+      { token: 'delimiter.bracket',  foreground: 'c3c0d8' },
+      { token: 'tag',                foreground: 'ff6767' },
+      { token: 'attribute.name',     foreground: 'a277ff' },
+      { token: 'attribute.value',    foreground: 'f694ff' },
+      { token: 'regexp',             foreground: '61ffca' },
+    ],
+    colors: {
+      'editor.background':              '#15141b',
+      'editor.foreground':              '#edecee',
+      'editor.lineHighlightBackground': '#1e1d26',
+      'editor.selectionBackground':     '#a277ff33',
+      'editor.inactiveSelectionBackground': '#a277ff1a',
+      'editorLineNumber.foreground':    '#3a3850',
+      'editorLineNumber.activeForeground': '#a277ff',
+      'editorCursor.foreground':        '#a277ff',
+      'editorWhitespace.foreground':    '#2a2838',
+      'editorIndentGuide.background':   '#2a2838',
+      'editorIndentGuide.activeBackground': '#3a3850',
+      'editor.findMatchBackground':     '#ffca8544',
+      'editor.findMatchHighlightBackground': '#ffca8522',
+      'editorBracketMatch.background':  '#a277ff22',
+      'editorBracketMatch.border':      '#a277ff66',
+      'editorSuggestWidget.background': '#1c1b22',
+      'editorSuggestWidget.border':     '#2a2838',
+      'editorSuggestWidget.selectedBackground': '#a277ff22',
+      'editorHoverWidget.background':   '#1c1b22',
+      'editorHoverWidget.border':       '#2a2838',
+      'scrollbar.shadow':               '#00000000',
+      'scrollbarSlider.background':     '#2a283880',
+      'scrollbarSlider.hoverBackground':'#3a385080',
+      'scrollbarSlider.activeBackground':'#a277ff44',
+    }
+  });
+
+  let editor;
+  let currentLang = 'javascript';
+  let currentSnippetId = null;
+  let snippets = [];
+  let fontSize = 13;
+
+  const templates = {
+    javascript: `// JavaScript\nfunction twoSum(nums, target) {\n  const map = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const comp = target - nums[i];\n    if (map.has(comp)) return [map.get(comp), i];\n    map.set(nums[i], i);\n  }\n  return [];\n}\n\nconsole.log(twoSum([2, 7, 11, 15], 9));\n`,
+    typescript: `// TypeScript\nfunction twoSum(nums: number[], target: number): number[] {\n  const map = new Map<number, number>();\n  for (let i = 0; i < nums.length; i++) {\n    const comp = target - nums[i];\n    if (map.has(comp)) return [map.get(comp)!, i];\n    map.set(nums[i], i);\n  }\n  return [];\n}\n\nconsole.log(twoSum([2, 7, 11, 15], 9));\n`,
+    python:     `# Python\nfrom typing import List\n\ndef two_sum(nums: List[int], target: int) -> List[int]:\n    seen = {}\n    for i, n in enumerate(nums):\n        comp = target - n\n        if comp in seen:\n            return [seen[comp], i]\n        seen[n] = i\n    return []\n\nprint(two_sum([2, 7, 11, 15], 9))\n`
+  };
+
+  const monacoLang = { javascript: 'javascript', typescript: 'typescript', python: 'python' };
+
+  editor = monaco.editor.create(document.getElementById('editor-wrap'), {
+    value: templates.javascript,
+    language: 'javascript',
+    theme: 'aura-dark',
+    fontSize,
+    fontFamily: "'Fira Code', 'Cascadia Code', 'SF Mono', monospace",
+    fontLigatures: true,
+    minimap: { enabled: false },
+    lineNumbers: 'on',
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    padding: { top: 14, bottom: 14 },
+    renderLineHighlight: 'line',
+    tabSize: 2,
+    wordWrap: 'on',
+    suggestOnTriggerCharacters: true,
+    quickSuggestions: true,
+    bracketPairColorization: { enabled: true },
+    overviewRulerLanes: 0,
+    hideCursorInOverviewRuler: true,
+    cursorBlinking: 'smooth',
+    cursorSmoothCaretAnimation: 'on',
+    smoothScrolling: true,
+    scrollbar: { vertical: 'auto', horizontal: 'auto' }
+  });
+
+  // ── Font size controls ────────────────────────────────────────────────
+  const fontLabel = document.getElementById('font-size-label');
+
+  function setFontSize(n) {
+    fontSize = Math.max(10, Math.min(24, n));
+    editor.updateOptions({ fontSize });
+    fontLabel.textContent = fontSize;
+    fontLabel.setAttribute('aria-label', `Current font size: ${fontSize}`);
+  }
+
+  document.getElementById('font-inc').addEventListener('click', () => setFontSize(fontSize + 1));
+  document.getElementById('font-dec').addEventListener('click', () => setFontSize(fontSize - 1));
+
+  // Ctrl+= / Ctrl+-
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Equal,  () => setFontSize(fontSize + 1));
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Minus,  () => setFontSize(fontSize - 1));
+
+  // ── Lang tabs ─────────────────────────────────────────────────────────
+  document.querySelectorAll('.lang-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchLang(tab.dataset.lang));
+  });
+
+  function switchLang(lang) {
+    currentLang = lang;
+    document.querySelectorAll('.lang-tab').forEach(t => {
+      const isActive = t.dataset.lang === lang;
+      t.classList.toggle('active', isActive);
+      t.setAttribute('aria-selected', isActive);
+    });
+    monaco.editor.setModelLanguage(editor.getModel(), monacoLang[lang]);
+    if (!currentSnippetId) editor.setValue(templates[lang]);
+  }
+
+  // ── Run ───────────────────────────────────────────────────────────────
+  const btnRun = document.getElementById('btn-run');
+  btnRun.addEventListener('click', runCode);
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runCode);
+
+  async function runCode() {
+    const code = editor.getValue();
+    const status  = document.getElementById('output-status');
+    const label   = document.getElementById('output-label');
+    const content = document.getElementById('output-content');
+    const timeEl  = document.getElementById('output-time');
+
+    status.className = 'output-status running';
+    label.textContent = 'Running…';
+    content.innerHTML = '<span class="out-meta">Executing…</span>';
+    btnRun.disabled = true;
+
+    try {
+      const res  = await fetch('/api/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: currentLang, code })
+      });
+      const data = await res.json();
+
+      let html = '';
+      if (data.output) html += `<span class="out-stdout">${escHtml(data.output)}</span>`;
+      if (data.error)  html += `<span class="out-stderr">${escHtml(data.error)}</span>`;
+      if (!data.output && !data.error) html = '<span class="out-meta">No output</span>';
+
+      content.innerHTML = html;
+      timeEl.textContent = data.elapsed ? `${data.elapsed}ms` : '';
+      status.className = 'output-status ' + (data.error ? 'err' : 'ok');
+      label.textContent = data.error ? 'Error' : 'Output';
+    } catch (e) {
+      content.innerHTML = `<span class="out-stderr">${escHtml(e.message)}</span>`;
+      status.className = 'output-status err';
+      label.textContent = 'Error';
+    }
+
+    btnRun.disabled = false;
+  }
+
+  // ── Snippet folders sidebar ───────────────────────────────────────────
+  const FOLDERS = [
+    { lang: 'javascript', label: 'JavaScript', icon: '🟨', dotClass: 'dot-js' },
+    { lang: 'typescript', label: 'TypeScript',  icon: '🟦', dotClass: 'dot-ts' },
+    { lang: 'python',     label: 'Python',       icon: '🐍', dotClass: 'dot-py' },
+  ];
+
+  // Track which folders are open (default all open)
+  const folderOpen = { javascript: true, typescript: true, python: true };
+
+  function startRename(item, s) {
+    const nameEl  = item.querySelector('.snippet-name');
+    const actions = item.querySelector('.snippet-actions');
+    const original = s.title || 'Untitled';
+
+    const input = document.createElement('input');
+    input.className = 'snippet-rename-input';
+    input.value = original;
+
+    nameEl.replaceWith(input);
+    actions.style.display = 'none';
+    input.focus();
+    input.select();
+
+    async function commit() {
+      const newTitle = input.value.trim() || original;
+      try {
+        await fetch(`/api/snippets/${s._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newTitle, language: s.language, code: s.code || '' })
+        });
+        if (currentSnippetId === s._id) {
+          document.getElementById('snippet-title').value = newTitle;
+        }
+        await loadSnippets();
+      } catch (_) {
+        await loadSnippets();
+      }
+    }
+
+    function cancel() {
+      input.replaceWith(nameEl);
+      actions.style.display = '';
+    }
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+
+    input.addEventListener('blur', commit);
+  }
+
+  async function loadSnippets() {
+    try {
+      const res = await fetch('/api/snippets');
+      snippets = await res.json();
+    } catch (_) { snippets = []; }
+    renderSnippetList();
+  }
+
+  function renderSnippetList() {
+    const list = document.getElementById('snippet-list');
+    list.innerHTML = '';
+
+    FOLDERS.forEach(({ lang, label, icon }) => {
+      const items = snippets.filter(s => s.language === lang);
+      const isOpen = folderOpen[lang];
+
+      const folder = document.createElement('div');
+      folder.className = 'folder' + (isOpen ? ' open' : '');
+      folder.innerHTML = `
+        <div class="folder-header" role="button" aria-expanded="${isOpen}">
+          <span class="folder-arrow">&#9658;</span>
+          <span class="folder-icon" aria-hidden="true">${icon}</span>
+          <span class="folder-label">${label}</span>
+          ${items.length ? `<span class="folder-count" aria-label="${items.length} snippets">${items.length}</span>` : ''}
+        </div>
+        <div class="folder-items" role="list"></div>
+      `;
+
+      const headerEl = folder.querySelector('.folder-header');
+      headerEl.addEventListener('click', () => {
+        folderOpen[lang] = !folderOpen[lang];
+        folder.classList.toggle('open', folderOpen[lang]);
+        headerEl.setAttribute('aria-expanded', folderOpen[lang]);
+      });
+
+      const itemsEl = folder.querySelector('.folder-items');
+      items.forEach(s => {
+        const item = document.createElement('div');
+        item.className = 'snippet-item' + (s._id === currentSnippetId ? ' active' : '');
+        item.setAttribute('role', 'listitem');
+        item.innerHTML = `
+          <span class="snippet-name">${escHtml(s.title || 'Untitled')}</span>
+          <div class="snippet-actions">
+            <button class="snippet-ren" title="Rename" aria-label="Rename snippet">&#9998;</button>
+            <button class="snippet-del" title="Delete" aria-label="Delete snippet">&#215;</button>
+          </div>
+        `;
+
+        item.addEventListener('click', (e) => {
+          if (e.target.closest('.snippet-actions')) return;
+          loadSnippet(s._id);
+        });
+
+        item.querySelector('.snippet-del').addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteSnippet(s._id);
+        });
+
+        item.querySelector('.snippet-ren').addEventListener('click', (e) => {
+          e.stopPropagation();
+          startRename(item, s);
+        });
+
+        itemsEl.appendChild(item);
+      });
+
+      list.appendChild(folder);
+    });
+  }
+
+  async function loadSnippet(id) {
+    const res = await fetch(`/api/snippets/${id}`);
+    const s = await res.json();
+    currentSnippetId = id;
+    document.getElementById('snippet-title').value = s.title || '';
+    switchLang(s.language);
+    editor.setValue(s.code || '');
+    renderSnippetList();
+  }
+
+  async function deleteSnippet(id) {
+    await fetch(`/api/snippets/${id}`, { method: 'DELETE' });
+    if (currentSnippetId === id) {
+      currentSnippetId = null;
+      document.getElementById('snippet-title').value = '';
+      editor.setValue(templates[currentLang]);
+    }
+    await loadSnippets();
+    showToast('Deleted');
+  }
+
+  document.getElementById('btn-save').addEventListener('click', saveSnippet);
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveSnippet);
+
+  async function saveSnippet() {
+    const title = document.getElementById('snippet-title').value || 'Untitled';
+    const code  = editor.getValue();
+    const body  = { title, language: currentLang, code };
+
+    try {
+      if (currentSnippetId) {
+        await fetch(`/api/snippets/${currentSnippetId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+      } else {
+        const res = await fetch('/api/snippets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const s = await res.json();
+        currentSnippetId = s._id;
+        folderOpen[currentLang] = true;
+      }
+      await loadSnippets();
+      showToast('Saved');
+    } catch (_) {
+      showToast('Save failed — is MongoDB running?');
+    }
+  }
+
+  document.getElementById('btn-new').addEventListener('click', () => {
+    currentSnippetId = null;
+    document.getElementById('snippet-title').value = '';
+    editor.setValue(templates[currentLang]);
+    renderSnippetList();
+  });
+
+  // ── Sidebar toggle ────────────────────────────────────────────────────
+  document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+    document.getElementById('btn-toggle-sidebar').setAttribute('aria-expanded', !sidebar.classList.contains('collapsed'));
+    editor.layout();
+  });
+
+  // ── Resize output panel ───────────────────────────────────────────────
+  const resizeHandle = document.getElementById('resize-handle');
+  const outputPanel  = document.getElementById('output-panel');
+  let isResizing = false;
+
+  resizeHandle.addEventListener('mousedown', () => {
+    isResizing = true;
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    const rect = document.getElementById('editor-wrap').getBoundingClientRect();
+    const newH = Math.max(60, Math.min(rect.height + outputPanel.offsetHeight - 80, (rect.bottom + outputPanel.offsetHeight) - e.clientY));
+    outputPanel.style.height = newH + 'px';
+    editor.layout();
+  });
+
+  document.addEventListener('mouseup', () => {
+    isResizing = false;
+    document.body.style.userSelect = '';
+  });
+
+  // ── Toast ─────────────────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  loadSnippets();
+});
+</script>
+</body>
+</html>
