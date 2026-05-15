@@ -478,6 +478,46 @@
     }
   }
 
+  /* ── Big center popup (Apple-style) ── */
+  .big-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.75);
+    background: rgba(28, 27, 34, 0.94);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 36px 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+    text-align: center;
+    min-width: 220px;
+  }
+
+  .big-popup.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .big-popup-icon { font-size: 56px; line-height: 1; }
+
+  .big-popup-text {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
   /* ── Toast ── */
   .toast {
     position: fixed;
@@ -848,6 +888,10 @@
 
 </main>
 
+<div class="big-popup" id="big-popup" aria-live="assertive">
+  <div class="big-popup-icon" id="big-popup-icon"></div>
+  <div class="big-popup-text" id="big-popup-text"></div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
@@ -1085,13 +1129,13 @@ require(['vs/editor/editor.main'], function () {
       timeEl.textContent = data.elapsed ? `${data.elapsed}ms` : '';
       status.className = 'output-status ' + (data.error ? 'err' : 'ok');
       label.textContent = data.error ? 'Error' : 'Output';
-      if (data.error) showToast('Gand Fatt Gayi!!! 💀');
-      else            showToast('Jai Ho Deepak Ki!! 🎉');
+      if (data.error) showBigPopup('💀', 'Gand Fatt Gayi!!!');
+      else            showBigPopup('🎉', 'Jai Ho Deepak Ki!!');
     } catch (e) {
       content.innerHTML = `<span class="out-stderr">${escHtml(e.message)}</span>`;
       status.className = 'output-status err';
       label.textContent = 'Error';
-      showToast('Gand Fatt Gayi!!! 💀');
+      showBigPopup('💀', 'Gand Fatt Gayi!!!');
     }
 
     btnRun.disabled = false;
@@ -1353,6 +1397,17 @@ require(['vs/editor/editor.main'], function () {
   resizeHandle.addEventListener('touchstart', (e) => { startResize(); e.preventDefault(); }, { passive: false });
   document.addEventListener('touchmove',  (e) => { doResize(e.touches[0].clientY); e.preventDefault(); }, { passive: false });
   document.addEventListener('touchend', endResize);
+
+  // ── Big center popup ──────────────────────────────────────────────────
+  let _popupTimer;
+  function showBigPopup(icon, text) {
+    const el = document.getElementById('big-popup');
+    document.getElementById('big-popup-icon').textContent = icon;
+    document.getElementById('big-popup-text').textContent = text;
+    el.classList.add('show');
+    clearTimeout(_popupTimer);
+    _popupTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  }
 
   // ── Toast ─────────────────────────────────────────────────────────────
   function showToast(msg) {
