@@ -610,9 +610,56 @@
   }
 
   .btn-logout:hover { color: var(--red); border-color: rgba(255,103,103,0.4); }
+
+  /* ── Sidebar overlay (mobile) ── */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 99;
+    backdrop-filter: blur(2px);
+  }
+  .sidebar-overlay.show { display: block; }
+
+  /* ── Responsive — tablet ── */
+  @media (max-width: 768px) {
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 100;
+      width: 260px !important;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.45);
+    }
+    .sidebar.open      { transform: translateX(0); }
+    .sidebar.collapsed { transform: translateX(-100%); }
+
+    .font-controls { display: none; }
+    .topbar { padding: 6px 8px; gap: 6px; }
+    .btn    { padding: 5px 10px; font-size: 11px; }
+
+    .output-panel { height: 180px; }
+    .auth-card    { width: calc(100vw - 32px); }
+  }
+
+  /* ── Responsive — phone ── */
+  @media (max-width: 480px) {
+    .topbar-title { display: none; }
+    .btn-logout   { display: none; }
+
+    #user-name  { display: none; }
+    .user-chip  { padding: 3px 6px; }
+
+    .lang-tab   { padding: 4px 7px; font-size: 11px; }
+    .output-panel { height: 150px; }
+  }
 </style>
 </head>
 <body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
 
 <!-- Auth screen -->
 <div id="auth-screen" role="dialog" aria-modal="true" aria-labelledby="auth-title">
@@ -1069,6 +1116,7 @@ require(['vs/editor/editor.main'], function () {
     switchLang(s.language);
     editor.setValue(s.code || '');
     renderSnippetList();
+    if (window.innerWidth <= 768) closeSidebar();
   }
 
   async function deleteSnippet(id) {
@@ -1122,35 +1170,57 @@ require(['vs/editor/editor.main'], function () {
   });
 
   // ── Sidebar toggle ────────────────────────────────────────────────────
+  const overlay = document.getElementById('sidebar-overlay');
+
+  function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (window.innerWidth <= 768) {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('show');
+    } else {
+      sidebar.classList.add('collapsed');
+    }
+    document.getElementById('btn-toggle-sidebar').setAttribute('aria-expanded', 'false');
+    editor.layout();
+  }
+
   document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
     const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('collapsed');
-    document.getElementById('btn-toggle-sidebar').setAttribute('aria-expanded', !sidebar.classList.contains('collapsed'));
+    if (window.innerWidth <= 768) {
+      const isOpen = sidebar.classList.toggle('open');
+      overlay.classList.toggle('show', isOpen);
+      document.getElementById('btn-toggle-sidebar').setAttribute('aria-expanded', isOpen);
+    } else {
+      sidebar.classList.toggle('collapsed');
+      document.getElementById('btn-toggle-sidebar').setAttribute('aria-expanded', !sidebar.classList.contains('collapsed'));
+    }
     editor.layout();
   });
+
+  overlay.addEventListener('click', closeSidebar);
 
   // ── Resize output panel ───────────────────────────────────────────────
   const resizeHandle = document.getElementById('resize-handle');
   const outputPanel  = document.getElementById('output-panel');
   let isResizing = false;
 
-  resizeHandle.addEventListener('mousedown', () => {
-    isResizing = true;
-    document.body.style.userSelect = 'none';
-  });
-
-  document.addEventListener('mousemove', (e) => {
+  function startResize() { isResizing = true; document.body.style.userSelect = 'none'; }
+  function endResize()   { isResizing = false; document.body.style.userSelect = ''; }
+  function doResize(clientY) {
     if (!isResizing) return;
     const rect = document.getElementById('editor-wrap').getBoundingClientRect();
-    const newH = Math.max(60, Math.min(rect.height + outputPanel.offsetHeight - 80, (rect.bottom + outputPanel.offsetHeight) - e.clientY));
+    const newH = Math.max(60, Math.min(rect.height + outputPanel.offsetHeight - 80, (rect.bottom + outputPanel.offsetHeight) - clientY));
     outputPanel.style.height = newH + 'px';
     editor.layout();
-  });
+  }
 
-  document.addEventListener('mouseup', () => {
-    isResizing = false;
-    document.body.style.userSelect = '';
-  });
+  resizeHandle.addEventListener('mousedown', startResize);
+  document.addEventListener('mousemove', (e) => doResize(e.clientY));
+  document.addEventListener('mouseup', endResize);
+
+  resizeHandle.addEventListener('touchstart', (e) => { startResize(); e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove',  (e) => { doResize(e.touches[0].clientY); e.preventDefault(); }, { passive: false });
+  document.addEventListener('touchend', endResize);
 
   // ── Toast ─────────────────────────────────────────────────────────────
   function showToast(msg) {
