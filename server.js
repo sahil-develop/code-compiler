@@ -162,84 +162,88 @@ app.get('/api/auth/me', (req, res) => {
 
 // ── Code execution ────────────────────────────────────────────────────────────
 
-// Piston public API — used in production (Vercel has no python/ts-node)
-const PISTON_RUNTIMES = {
-  python:     { language: 'python',     version: '3.10.0' },
-  javascript: { language: 'javascript', version: '18.15.0' },
-  typescript: { language: 'typescript', version: '5.0.3' },
-};
+const SUPPORTED_LANGS = new Set(['javascript', 'typescript', 'python']);
 
-async function runViaPiston(language, code) {
-  const runtime = PISTON_RUNTIMES[language];
-  const start   = Date.now();
-
-  const res = await fetch('https://emkc.org/api/v2/piston/execute', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({
-      language: runtime.language,
-      version:  runtime.version,
-      files:    [{ content: code }],
-    }),
-    signal: AbortSignal.timeout(8000),
-  });
-
-  if (!res.ok) throw new Error(`Piston API error: ${res.status}`);
-
-  const data    = await res.json();
-  const run     = data.run || {};
-  const elapsed = Date.now() - start;
-
-  return {
-    output:  run.stdout || '',
-    error:   run.stderr || (run.code !== 0 ? `Process exited with code ${run.code}` : ''),
-    elapsed,
-  };
+function getBaseUrl() {
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return `http://localhost:${process.env.PORT || 3737}`;
 }
 
-// Local exec — used in development only
-function runLocally(language, code) {
+// JavaScript — run with the current Node.js binary (works in Vercel Lambda too)
+function runJavaScript(code) {
   return new Promise((resolve) => {
-    const tmpDir = os.tmpdir();
-    let filePath, command;
-
-    if (language === 'python') {
-      filePath = path.join(tmpDir, `cr_${Date.now()}.py`);
-      fs.writeFileSync(filePath, code);
-      command = `python3 "${filePath}"`;
-    } else if (language === 'javascript') {
-      filePath = path.join(tmpDir, `cr_${Date.now()}.js`);
-      fs.writeFileSync(filePath, code);
-      command = `node "${filePath}"`;
-    } else if (language === 'typescript') {
-      filePath = path.join(tmpDir, `cr_${Date.now()}.ts`);
-      fs.writeFileSync(filePath, code);
-      command = `npx --yes ts-node --skip-project "${filePath}"`;
-    } else {
-      return resolve({ output: '', error: 'Unsupported language', elapsed: 0 });
-    }
-
+    const file = path.join(os.tmpdir(), `cr_${Date.now()}.js`);
+    fs.writeFileSync(file, code);
     const start = Date.now();
-    exec(command, { timeout: 10000, maxBuffer: 1024 * 512 }, (err, stdout, stderr) => {
-      try { fs.unlinkSync(filePath); } catch (_) {}
-      resolve({
-        output:  stdout,
-        error:   stderr || (err && !stderr ? err.message : ''),
-        elapsed: Date.now() - start,
-      });
+    exec(`"${process.execPath}" "${file}"`, { timeout: 10000, maxBuffer: 1024 * 512 }, (err, stdout, stderr) => {
+      try { fs.unlinkSync(file); } catch (_) {}
+      resolve({ output: stdout, error: stderr || (err && !stderr ? err.message : ''), elapsed: Date.now() - start });
     });
   });
 }
 
+// TypeScript — transpile with the typescript package then run as JS (no external API)
+function runTypeScript(code) {
+  return new Promise((resolve) => {
+    let ts;
+    try { ts = require('typescript'); } catch (_) {
+      return resolve({ output: '', error: 'TypeScript compiler not installed', elapsed: 0 });
+    }
+    const { outputText, diagnostics } = ts.transpileModule(code, {
+      compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, esModuleInterop: true, strict: false },
+      reportDiagnostics: true,
+    });
+    if (diagnostics && diagnostics.length) {
+      const msg = diagnostics.map(d => ts.flattenDiagnosticMessageText(d.messageText, '\n')).join('\n');
+      return resolve({ output: '', error: msg, elapsed: 0 });
+    }
+    const file = path.join(os.tmpdir(), `cr_${Date.now()}.js`);
+    fs.writeFileSync(file, outputText);
+    const start = Date.now();
+    exec(`"${process.execPath}" "${file}"`, { timeout: 10000, maxBuffer: 1024 * 512 }, (err, stdout, stderr) => {
+      try { fs.unlinkSync(file); } catch (_) {}
+      resolve({ output: stdout, error: stderr || (err && !stderr ? err.message : ''), elapsed: Date.now() - start });
+    });
+  });
+}
+
+// Python — proxies to /api/run-python
+// Production: served by api/run-python.py (Vercel Python runtime, has python3)
+// Development: handled by the Express route below (uses local python3)
+async function runPython(code) {
+  const res = await fetch(`${getBaseUrl()}/api/run-python`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ code }),
+    signal:  AbortSignal.timeout(12000),
+  });
+  if (!res.ok) throw new Error('Python execution service unavailable');
+  return res.json();
+}
+
+// Development fallback — intercepted by Vercel Python function in production
+app.post('/api/run-python', (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.json({ output: '', error: 'No code provided', elapsed: 0 });
+  const file = path.join(os.tmpdir(), `cr_${Date.now()}.py`);
+  fs.writeFileSync(file, code);
+  const start = Date.now();
+  exec(`python3 "${file}"`, { timeout: 10000, maxBuffer: 1024 * 512 }, (err, stdout, stderr) => {
+    try { fs.unlinkSync(file); } catch (_) {}
+    res.json({ output: stdout, error: stderr || (err && !stderr ? err.message : ''), elapsed: Date.now() - start });
+  });
+});
+
 app.post('/api/run', requireAuth, async (req, res) => {
   const { language, code } = req.body;
-  if (!code)                     return res.json({ output: '', error: 'No code provided' });
-  if (!PISTON_RUNTIMES[language]) return res.json({ output: '', error: 'Unsupported language' });
+  if (!code)                        return res.json({ output: '', error: 'No code provided' });
+  if (!SUPPORTED_LANGS.has(language)) return res.json({ output: '', error: 'Unsupported language' });
 
   try {
-    const result = IS_PROD
-      ? await runViaPiston(language, code)
-      : await runLocally(language, code);
+    let result;
+    if (language === 'javascript')       result = await runJavaScript(code);
+    else if (language === 'typescript')  result = await runTypeScript(code);
+    else                                 result = await runPython(code);
     res.json(result);
   } catch (err) {
     res.json({ output: '', error: err.message });
