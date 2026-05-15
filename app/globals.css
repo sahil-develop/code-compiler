@@ -649,6 +649,30 @@ body {
   input, textarea, select { font-size: 16px !important; }
 }
 
+/* ── Top progress bar ── */
+.top-bar {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  z-index: 99999;
+  pointer-events: none;
+  background: linear-gradient(90deg, #a277ff, #61ffca);
+  box-shadow: 0 0 10px #a277ff88;
+  transition: width 0.25s ease, opacity 0.3s ease;
+}
+.top-bar.active {
+  animation: topBarProgress 1.2s ease-in-out infinite alternate;
+}
+.top-bar.done {
+  width: 100% !important;
+  opacity: 0;
+  transition: width 0.1s ease, opacity 0.4s ease 0.1s;
+}
+@keyframes topBarProgress {
+  0%   { width: 20%; }
+  100% { width: 85%; }
+}
+
 /* ── Skeleton shimmer ── */
 @keyframes shimmer {
   0%   { background-position: -400px 0; }

@@ -161,6 +161,24 @@ function AuthScreen({ onLogin }) {
   );
 }
 
+// ── Top progress bar ─────────────────────────────────────────────────────────
+function TopBar({ active }) {
+  const [phase, setPhase] = useState('idle'); // idle | active | done
+
+  useEffect(() => {
+    if (active) {
+      setPhase('active');
+    } else if (phase === 'active') {
+      setPhase('done');
+      const t = setTimeout(() => setPhase('idle'), 500);
+      return () => clearTimeout(t);
+    }
+  }, [active]);
+
+  if (phase === 'idle') return null;
+  return <div className={`top-bar${phase === 'done' ? ' done' : ' active'}`} />;
+}
+
 // ── Page loading screen ───────────────────────────────────────────────────────
 function PageLoader() {
   return (
@@ -419,6 +437,7 @@ export default function Home() {
 
   return (
     <>
+      <TopBar active={snippetLoading || running} />
       {isMobile && sidebarOpen && (
         <div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
       )}
