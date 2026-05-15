@@ -1,10 +1,13 @@
 'use client';
 
 import './globals.css';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 
-const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
+const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
+  ssr: false,
+  loading: () => <div className="editor-loading"><div className="spinner" /></div>,
+});
 
 const TEMPLATES = {
   javascript: `// JavaScript\nfunction twoSum(nums, target) {\n  const map = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const comp = target - nums[i];\n    if (map.has(comp)) return [map.get(comp), i];\n    map.set(nums[i], i);\n  }\n  return [];\n}\n\nconsole.log(twoSum([2, 7, 11, 15], 9));\n`,
@@ -22,23 +25,22 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ── Aura Dark theme definition ────────────────────────────────────────────────
 function defineAuraDark(monaco) {
   monaco.editor.defineTheme('aura-dark', {
     base: 'vs-dark', inherit: true,
     rules: [
-      { token: '',                   foreground: 'edecee', background: '15141b' },
-      { token: 'comment',            foreground: '6d6a7c', fontStyle: 'italic' },
-      { token: 'keyword',            foreground: 'a277ff', fontStyle: 'bold' },
-      { token: 'keyword.operator',   foreground: '82e2ff' },
-      { token: 'string',             foreground: 'f694ff' },
-      { token: 'number',             foreground: 'ffca85' },
-      { token: 'function',           foreground: '61ffca' },
-      { token: 'type',               foreground: '82e2ff' },
-      { token: 'operator',           foreground: '89ddff' },
-      { token: 'delimiter',          foreground: '8b8fa8' },
-      { token: 'delimiter.bracket',  foreground: 'c3c0d8' },
-      { token: 'regexp',             foreground: '61ffca' },
+      { token: '',                  foreground: 'edecee', background: '15141b' },
+      { token: 'comment',           foreground: '6d6a7c', fontStyle: 'italic' },
+      { token: 'keyword',           foreground: 'a277ff', fontStyle: 'bold' },
+      { token: 'keyword.operator',  foreground: '82e2ff' },
+      { token: 'string',            foreground: 'f694ff' },
+      { token: 'number',            foreground: 'ffca85' },
+      { token: 'function',          foreground: '61ffca' },
+      { token: 'type',              foreground: '82e2ff' },
+      { token: 'operator',          foreground: '89ddff' },
+      { token: 'delimiter',         foreground: '8b8fa8' },
+      { token: 'delimiter.bracket', foreground: 'c3c0d8' },
+      { token: 'regexp',            foreground: '61ffca' },
     ],
     colors: {
       'editor.background':              '#15141b',
@@ -63,30 +65,35 @@ function defineAuraDark(monaco) {
 
 // ── Auth screen ───────────────────────────────────────────────────────────────
 function AuthScreen({ onLogin }) {
-  const [mode, setMode]     = useState('login');
-  const [username, setUser] = useState('');
-  const [password, setPass] = useState('');
-  const [error, setError]   = useState('');
+  const [mode, setMode]   = useState('login');
+  const [username, setU]  = useState('');
+  const [password, setP]  = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  async function submit(e) {
-    e?.preventDefault();
+  async function submit() {
     setError('');
     if (!username || !password) { setError('Fill in both fields'); return; }
-    const res  = await fetch(`/api/auth/${mode}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || 'Something went wrong'); return; }
-    onLogin(data.username);
+    setLoading(true);
+    try {
+      const res  = await fetch(`/api/auth/${mode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Something went wrong'); return; }
+      onLogin(data.username);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div id="auth-screen" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <div className="auth-card">
         <div className="auth-logo" id="auth-title">&#9654; CodeRunner</div>
-        <div className="auth-tabs" role="tablist" aria-label="Sign in or register">
+        <div className="auth-tabs" role="tablist">
           {['login','register'].map(m => (
             <button key={m} className={`auth-tab${mode===m?' active':''}`} role="tab"
               aria-selected={mode===m} onClick={() => { setMode(m); setError(''); }}>
@@ -96,16 +103,28 @@ function AuthScreen({ onLogin }) {
         </div>
         <div className="auth-fields">
           <input className="auth-input" type="text" placeholder="Username" value={username}
-            onChange={e => setUser(e.target.value)} autoComplete="username" maxLength={32}
+            onChange={e => setU(e.target.value)} autoComplete="username" maxLength={32}
             onKeyDown={e => e.key==='Enter' && document.getElementById('auth-pass')?.focus()} />
           <input id="auth-pass" className="auth-input" type="password" placeholder="Password" value={password}
-            onChange={e => setPass(e.target.value)} autoComplete="current-password"
+            onChange={e => setP(e.target.value)} autoComplete="current-password"
             onKeyDown={e => e.key==='Enter' && submit()} />
         </div>
         <div className="auth-error" role="alert" aria-live="polite">{error}</div>
-        <button className="auth-submit" onClick={submit}>
-          {mode==='login' ? 'Sign in' : 'Create account'}
+        <button className="auth-submit" onClick={submit} disabled={loading}>
+          {loading ? <span className="btn-spinner" /> : (mode==='login' ? 'Sign in' : 'Create account')}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Page loading screen ───────────────────────────────────────────────────────
+function PageLoader() {
+  return (
+    <div className="page-loader">
+      <div className="page-loader-inner">
+        <div className="loader-logo">&#9654; CodeRunner</div>
+        <div className="loader-bar"><div className="loader-bar-fill" /></div>
       </div>
     </div>
   );
@@ -114,9 +133,8 @@ function AuthScreen({ onLogin }) {
 // ── Main app ──────────────────────────────────────────────────────────────────
 export default function Home() {
   const [user,         setUser]         = useState(null);
-  const [authed,       setAuthed]       = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
   const [lang,         setLang]         = useState('javascript');
-  const [code,         setCode]         = useState(TEMPLATES.javascript);
   const [snippetId,    setSnippetId]    = useState(null);
   const [snippetTitle, setSnippetTitle] = useState('');
   const [snippets,     setSnippets]     = useState([]);
@@ -128,66 +146,76 @@ export default function Home() {
   const [renameVal,    setRenameVal]    = useState('');
   const [output,       setOutput]       = useState({ html: '<span class="out-meta">Press Run (⌘↵) to execute</span>', status: '', label: 'Output', time: '' });
   const [running,      setRunning]      = useState(false);
+  const [snippetLoading, setSnippetLoading] = useState(false);
   const [toast,        setToast]        = useState('');
   const [popup,        setPopup]        = useState({ show: false, icon: '', text: '' });
   const [outputH,      setOutputH]      = useState(220);
 
-  const editorRef  = useRef(null);
-  const monacoRef  = useRef(null);
-  const popTimerRef = useRef(null);
-  const toastTimer = useRef(null);
-  const isResizing = useRef(false);
+  // Refs — never cause re-renders
+  const editorRef   = useRef(null);
+  const monacoRef   = useRef(null);
+  const langRef     = useRef('javascript');   // mirror of lang, readable in closures without stale state
+  const snippetIdRef = useRef(null);
+  const popTimer    = useRef(null);
+  const toastTimer  = useRef(null);
+  const isResizing  = useRef(false);
+  const outputHRef  = useRef(220);
 
-  // Check existing session
+  // Keep refs in sync
+  useEffect(() => { langRef.current = lang; }, [lang]);
+  useEffect(() => { snippetIdRef.current = snippetId; }, [snippetId]);
+  useEffect(() => { outputHRef.current = outputH; }, [outputH]);
+
+  // Check session on mount
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
-      if (d.user) { setUser(d.user.username); setAuthed(true); }
-      else setAuthed(false);
+      if (d.user) setUser(d.user.username);
+      setSessionReady(true);
     });
   }, []);
 
-  // Load snippets when authenticated
-  useEffect(() => {
-    if (user) loadSnippets();
-  }, [user]);
+  // Load snippets once logged in
+  useEffect(() => { if (user) loadSnippets(); }, [user]);
 
-  // Keyboard shortcuts
+  // Resize handle events
+  useEffect(() => {
+    function onMove(clientY) {
+      if (!isResizing.current) return;
+      const wrap = document.getElementById('editor-wrap');
+      if (!wrap) return;
+      const rect = wrap.getBoundingClientRect();
+      const cur  = outputHRef.current;
+      const newH = Math.max(60, Math.min(rect.height + cur - 80, (rect.bottom + cur) - clientY));
+      outputHRef.current = newH;
+      setOutputH(newH);
+      editorRef.current?.layout();
+    }
+    function onMouseMove(e) { onMove(e.clientY); }
+    function onTouchMove(e) { if (isResizing.current) { onMove(e.touches[0].clientY); e.preventDefault(); } }
+    function onUp() { isResizing.current = false; document.body.style.userSelect = ''; }
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onUp);
+    };
+  }, []);
+
+  // Global keyboard shortcuts
   useEffect(() => {
     function onKey(e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); runCode(); }
-      if ((e.metaKey || e.ctrlKey) && e.key === 's')     { e.preventDefault(); saveSnippet(); }
       if (e.key === 'Escape' && langPicker) setLangPicker(false);
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [lang, code, snippetId, snippetTitle, langPicker]);
+  }, [langPicker]);
 
-  // Resize handle — mouse
-  useEffect(() => {
-    function onMove(e) {
-      if (!isResizing.current) return;
-      const editorWrap = document.getElementById('editor-wrap');
-      if (!editorWrap) return;
-      const rect = editorWrap.getBoundingClientRect();
-      const newH = Math.max(60, Math.min(rect.height + outputH - 80, (rect.bottom + outputH) - e.clientY));
-      setOutputH(newH);
-      editorRef.current?.layout();
-    }
-    function onUp() { isResizing.current = false; document.body.style.userSelect = ''; }
-    function onTouch(e) { if (isResizing.current) { onMove({ clientY: e.touches[0].clientY }); e.preventDefault(); } }
-
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.addEventListener('touchmove', onTouch, { passive: false });
-    document.addEventListener('touchend', onUp);
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.removeEventListener('touchmove', onTouch);
-      document.removeEventListener('touchend', onUp);
-    };
-  }, [outputH]);
-
+  // ── Helpers ───────────────────────────────────────────────────────────────
   function showToast(msg) {
     setToast(msg);
     clearTimeout(toastTimer.current);
@@ -196,19 +224,24 @@ export default function Home() {
 
   function showPopup(icon, text) {
     setPopup({ show: true, icon, text });
-    clearTimeout(popTimerRef.current);
-    popTimerRef.current = setTimeout(() => setPopup(p => ({ ...p, show: false })), 2200);
+    clearTimeout(popTimer.current);
+    popTimer.current = setTimeout(() => setPopup(p => ({ ...p, show: false })), 2200);
   }
 
+  // Switch language — NO state update for editor value, set imperatively
   function switchLang(l) {
     setLang(l);
-    if (!snippetId) setCode(TEMPLATES[l]);
+    langRef.current = l;
     if (monacoRef.current && editorRef.current) {
       const model = editorRef.current.getModel();
       if (model) monacoRef.current.editor.setModelLanguage(model, l);
     }
+    if (!snippetIdRef.current) {
+      editorRef.current?.setValue(TEMPLATES[l]);
+    }
   }
 
+  // ── Snippets ──────────────────────────────────────────────────────────────
   async function loadSnippets() {
     try {
       const res = await fetch('/api/snippets');
@@ -218,37 +251,45 @@ export default function Home() {
   }
 
   async function loadSnippet(id) {
-    const res = await fetch(`/api/snippets/${id}`);
-    const s   = await res.json();
-    setSnippetId(id);
-    setSnippetTitle(s.title || '');
-    setLang(s.language);
-    setCode(s.code || '');
-    if (monacoRef.current && editorRef.current) {
-      const model = editorRef.current.getModel();
-      if (model) monacoRef.current.editor.setModelLanguage(model, s.language);
-      editorRef.current.setValue(s.code || '');
+    setSnippetLoading(true);
+    try {
+      const res = await fetch(`/api/snippets/${id}`);
+      const s   = await res.json();
+      setSnippetId(id);
+      snippetIdRef.current = id;
+      setSnippetTitle(s.title || '');
+      setLang(s.language);
+      langRef.current = s.language;
+      if (monacoRef.current && editorRef.current) {
+        const model = editorRef.current.getModel();
+        if (model) monacoRef.current.editor.setModelLanguage(model, s.language);
+        editorRef.current.setValue(s.code || '');
+      }
+      if (window.innerWidth <= 768) setSidebarOpen(false);
+    } finally {
+      setSnippetLoading(false);
     }
-    if (window.innerWidth <= 768) setSidebarOpen(false);
   }
 
   async function deleteSnippet(id) {
     await fetch(`/api/snippets/${id}`, { method: 'DELETE' });
-    if (snippetId === id) {
+    if (snippetIdRef.current === id) {
       setSnippetId(null);
+      snippetIdRef.current = null;
       setSnippetTitle('');
-      setCode(TEMPLATES[lang]);
+      editorRef.current?.setValue(TEMPLATES[langRef.current]);
     }
     await loadSnippets();
     showToast('Deleted');
   }
 
   async function saveSnippet() {
+    const code  = editorRef.current?.getValue() ?? '';
     const title = snippetTitle || 'Untitled';
-    const body  = { title, language: lang, code };
+    const body  = { title, language: langRef.current, code };
     try {
-      if (snippetId) {
-        await fetch(`/api/snippets/${snippetId}`, {
+      if (snippetIdRef.current) {
+        await fetch(`/api/snippets/${snippetIdRef.current}`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
         });
       } else {
@@ -257,7 +298,8 @@ export default function Home() {
         });
         const s = await res.json();
         setSnippetId(s._id);
-        setFolderOpen(f => ({ ...f, [lang]: true }));
+        snippetIdRef.current = s._id;
+        setFolderOpen(f => ({ ...f, [langRef.current]: true }));
       }
       await loadSnippets();
       showToast('Saved');
@@ -271,21 +313,22 @@ export default function Home() {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newTitle, language: s.language, code: s.code || '' }),
       });
-      if (snippetId === s._id) setSnippetTitle(newTitle);
+      if (snippetIdRef.current === s._id) setSnippetTitle(newTitle);
     } finally {
       setRenameId(null);
       await loadSnippets();
     }
   }
 
+  // ── Run ───────────────────────────────────────────────────────────────────
   async function runCode() {
-    const currentCode = editorRef.current ? editorRef.current.getValue() : code;
+    const code = editorRef.current?.getValue() ?? '';
     setRunning(true);
     setOutput({ html: '<span class="out-meta">Executing…</span>', status: 'running', label: 'Running…', time: '' });
     try {
       const res  = await fetch('/api/run', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: lang, code: currentCode }),
+        body: JSON.stringify({ language: langRef.current, code }),
       });
       const data = await res.json();
       let html = '';
@@ -301,37 +344,36 @@ export default function Home() {
     setRunning(false);
   }
 
+  // ── Editor mount ──────────────────────────────────────────────────────────
   function onEditorMount(editor, monaco) {
     editorRef.current  = editor;
     monacoRef.current  = monaco;
     defineAuraDark(monaco);
     monaco.editor.setTheme('aura-dark');
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runCode);
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,  saveSnippet);
+    // Shortcuts wired directly to functions — no stale closure issues via refs
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => runCode());
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,  () => saveSnippet());
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Equal, () => setFontSize(f => Math.min(24, f+1)));
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Minus, () => setFontSize(f => Math.max(10, f-1)));
   }
 
   function toggleSidebar() {
-    if (window.innerWidth <= 768) setSidebarOpen(o => !o);
-    else setSidebarOpen(o => !o);
+    setSidebarOpen(o => !o);
     setTimeout(() => editorRef.current?.layout(), 250);
   }
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  // ── Render ────────────────────────────────────────────────────────────────
+  if (!sessionReady) return <PageLoader />;
+  if (!user) return <AuthScreen onLogin={u => { setUser(u); }} />;
 
-  if (authed === false && !user) {
-    return <AuthScreen onLogin={u => { setUser(u); setAuthed(true); }} />;
-  }
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   return (
     <>
-      {/* Sidebar overlay (mobile) */}
       {isMobile && sidebarOpen && (
         <div className="sidebar-overlay show" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Language picker modal */}
       {langPicker && (
         <div className="lang-picker-overlay" role="dialog" aria-modal="true"
           onClick={e => e.target === e.currentTarget && setLangPicker(false)}>
@@ -342,9 +384,9 @@ export default function Home() {
                 <button key={f.lang} className="lang-picker-btn" onClick={() => {
                   setLangPicker(false);
                   setSnippetId(null);
+                  snippetIdRef.current = null;
                   setSnippetTitle('');
                   switchLang(f.lang);
-                  setCode(TEMPLATES[f.lang]);
                   if (window.innerWidth <= 768) setSidebarOpen(false);
                 }}>
                   <span className="lang-picker-icon">{f.icon}</span> {f.label}
@@ -355,9 +397,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* Top bar */}
       <header className="topbar">
-        <span className="topbar-title" aria-label="CodeRunner">&#9654; CodeRunner</span>
+        <span className="topbar-title">&#9654; CodeRunner</span>
         <nav className="lang-tabs" role="tablist" aria-label="Programming language">
           {[{l:'javascript',label:'JS'},{l:'typescript',label:'TS'},{l:'python',label:'PY'}].map(({l,label}) => (
             <button key={l} className={`lang-tab${lang===l?' active':''}`} role="tab"
@@ -371,19 +412,19 @@ export default function Home() {
           <button className="font-btn" onClick={() => setFontSize(f => Math.min(24,f+1))}>A&#8314;</button>
         </div>
         <button className="btn btn-save" onClick={saveSnippet}>Save</button>
-        <button className="btn btn-run" disabled={running} onClick={runCode}>&#9654; Run</button>
+        <button className="btn btn-run" disabled={running} onClick={runCode}>
+          {running ? <span className="btn-spinner" /> : '▶ Run'}
+        </button>
         <div className="user-chip">
           <div className="user-avatar" aria-hidden="true">{user?.[0]?.toUpperCase() ?? '?'}</div>
           <span className="user-name">{user}</span>
         </div>
         <button className="btn-logout" onClick={async () => { await fetch('/api/auth/logout', { method: 'POST' }); location.reload(); }}>Logout</button>
-        <button className="btn btn-icon" onClick={toggleSidebar} title="Toggle sidebar" aria-label="Toggle sidebar" aria-expanded={sidebarOpen}>&#8942;</button>
+        <button className="btn btn-icon" onClick={toggleSidebar} aria-label="Toggle sidebar" aria-expanded={sidebarOpen}>&#8942;</button>
       </header>
 
-      {/* Main */}
       <main className="main">
-        {/* Sidebar */}
-        <aside className={`sidebar${sidebarOpen ? (window.innerWidth <= 768 ? ' open' : '') : ' collapsed'}`} aria-label="Code snippets">
+        <aside className={`sidebar${isMobile ? (sidebarOpen ? ' open' : '') : (sidebarOpen ? '' : ' collapsed')}`} aria-label="Code snippets">
           <div className="sidebar-header" role="heading" aria-level={2}>Snippets</div>
           <div className="snippet-list" role="list">
             {FOLDERS.map(({ lang: fl, label, icon }) => {
@@ -400,7 +441,9 @@ export default function Home() {
                   </div>
                   <div className="folder-items" role="list">
                     {items.map(s => (
-                      <div key={s._id} className={`snippet-item${s._id===snippetId?' active':''}`} role="listitem"
+                      <div key={s._id}
+                        className={`snippet-item${s._id===snippetId?' active':''}${snippetLoading&&s._id===snippetId?' loading':''}`}
+                        role="listitem"
                         onClick={e => { if (!e.target.closest('.snippet-actions') && renameId!==s._id) loadSnippet(s._id); }}>
                         {renameId === s._id ? (
                           <input className="snippet-rename-input" autoFocus value={renameVal}
@@ -410,10 +453,15 @@ export default function Home() {
                         ) : (
                           <>
                             <span className="snippet-name">{s.title || 'Untitled'}</span>
-                            <div className="snippet-actions">
-                              <button className="snippet-ren" title="Rename" onClick={e => { e.stopPropagation(); setRenameId(s._id); setRenameVal(s.title || 'Untitled'); }}>&#9998;</button>
-                              <button className="snippet-del" title="Delete" onClick={e => { e.stopPropagation(); deleteSnippet(s._id); }}>&#215;</button>
-                            </div>
+                            {snippetLoading && s._id === snippetId
+                              ? <span className="snippet-spinner" />
+                              : (
+                                <div className="snippet-actions">
+                                  <button className="snippet-ren" title="Rename" onClick={e => { e.stopPropagation(); setRenameId(s._id); setRenameVal(s.title || 'Untitled'); }}>&#9998;</button>
+                                  <button className="snippet-del" title="Delete" onClick={e => { e.stopPropagation(); deleteSnippet(s._id); }}>&#215;</button>
+                                </div>
+                              )
+                            }
                           </>
                         )}
                       </div>
@@ -428,7 +476,6 @@ export default function Home() {
           </div>
         </aside>
 
-        {/* Editor + output */}
         <section className="editor-area" aria-label="Code editor">
           <div className="title-row">
             <input className="snippet-title-input" placeholder="Untitled" maxLength={80}
@@ -439,7 +486,7 @@ export default function Home() {
             <MonacoEditor
               height="100%"
               language={lang}
-              value={code}
+              defaultValue={TEMPLATES.javascript}
               theme="aura-dark"
               options={{
                 fontSize,
@@ -461,12 +508,11 @@ export default function Home() {
                 smoothScrolling: true,
                 scrollbar: { vertical: 'auto', horizontal: 'auto' },
               }}
-              onChange={v => setCode(v ?? '')}
               onMount={onEditorMount}
-              beforeMount={monaco => defineAuraDark(monaco)}
+              beforeMount={defineAuraDark}
             />
           </div>
-          <div className="resize-handle" role="separator" aria-orientation="horizontal" aria-label="Resize output panel"
+          <div className="resize-handle" role="separator" aria-label="Resize output panel"
             onMouseDown={() => { isResizing.current = true; document.body.style.userSelect = 'none'; }}
             onTouchStart={e => { isResizing.current = true; e.preventDefault(); }} />
           <section className="output-panel" style={{ height: outputH }} aria-label="Code output">
@@ -474,7 +520,7 @@ export default function Home() {
               <div className={`output-status${output.status ? ' '+output.status : ''}`} aria-hidden="true" />
               <span>{output.label}</span>
               <div className="spacer" />
-              <span aria-label="Execution time">{output.time}</span>
+              <span>{output.time}</span>
             </div>
             <div className="output-content" role="log" aria-live="polite"
               dangerouslySetInnerHTML={{ __html: output.html }} />
@@ -482,14 +528,12 @@ export default function Home() {
         </section>
       </main>
 
-      {/* Big popup */}
       <div className={`big-popup${popup.show ? ' show' : ''}`} aria-live="assertive">
         <div className="big-popup-icon">{popup.icon}</div>
         <div className="big-popup-text">{popup.text}</div>
       </div>
 
-      {/* Toast */}
-      {toast && <div className={`toast show`} role="status" aria-live="polite">{toast}</div>}
+      {toast && <div className="toast show" role="status" aria-live="polite">{toast}</div>}
     </>
   );
 }
