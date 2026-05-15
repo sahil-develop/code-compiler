@@ -1085,10 +1085,13 @@ require(['vs/editor/editor.main'], function () {
       timeEl.textContent = data.elapsed ? `${data.elapsed}ms` : '';
       status.className = 'output-status ' + (data.error ? 'err' : 'ok');
       label.textContent = data.error ? 'Error' : 'Output';
+      if (data.error) showToast('Gand Fatt Gayi!!! 💀');
+      else            showToast('Jai Ho Deepak Ki!! 🎉');
     } catch (e) {
       content.innerHTML = `<span class="out-stderr">${escHtml(e.message)}</span>`;
       status.className = 'output-status err';
       label.textContent = 'Error';
+      showToast('Gand Fatt Gayi!!! 💀');
     }
 
     btnRun.disabled = false;
