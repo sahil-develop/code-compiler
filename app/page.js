@@ -1,6 +1,5 @@
 'use client';
 
-import './globals.css';
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 
@@ -177,7 +176,7 @@ function PageLoader() {
 // ── Main app ──────────────────────────────────────────────────────────────────
 export default function Home() {
   const [user,         setUser]         = useState(null);
-  const [sessionReady, setSessionReady] = useState(false);
+  const [appReady, setAppReady] = useState(false);
   const [lang,         setLang]         = useState('javascript');
   const [snippetId,    setSnippetId]    = useState(null);
   const [snippetTitle, setSnippetTitle] = useState('');
@@ -215,12 +214,14 @@ export default function Home() {
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
       if (d.user) setUser(d.user.username);
-      setSessionReady(true);
+      else setAppReady(true); // no user → go straight to auth, mark ready
     });
   }, []);
 
-  // Load snippets once logged in
-  useEffect(() => { if (user) loadSnippets(); }, [user]);
+  // Load snippets once logged in, then mark app ready
+  useEffect(() => {
+    if (user) loadSnippets().then(() => setAppReady(true));
+  }, [user]);
 
   // Resize handle events
   useEffect(() => {
@@ -295,6 +296,7 @@ export default function Home() {
       setSnippets(Array.isArray(data) ? data : []);
     } catch { setSnippets([]); }
     finally { setSnippetsLoading(false); }
+    // returns void — callers can .then(() => ...) safely
   }
 
   async function loadSnippet(id) {
@@ -410,8 +412,8 @@ export default function Home() {
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
-  if (!sessionReady) return <PageLoader />;
-  if (!user) return <AuthScreen onLogin={u => { setUser(u); }} />;
+  if (!appReady) return <PageLoader />;
+  if (!user) return <AuthScreen onLogin={u => { setUser(u); setAppReady(false); }} />;
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 

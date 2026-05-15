@@ -1,3 +1,5 @@
+import './globals.css';
+
 const BASE = process.env.PUBLIC_URL || 'https://coderunner.vercel.app';
 
 export const metadata = {
