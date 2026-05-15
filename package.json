@@ -1,22 +1,23 @@
 {
   "name": "coderunner",
   "version": "1.0.0",
-  "description": "Local code runner for DSA and small problems",
-  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
   "engines": {
     "node": ">=18"
   },
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
-  },
   "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "connect-mongo": "^6.0.0",
-    "dotenv": "^17.4.2",
-    "express": "^4.18.2",
-    "express-session": "^1.19.0",
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "@monaco-editor/react": "^4.6.0",
     "mongoose": "^8.0.0",
-    "typescript": "^6.0.3"
+    "bcryptjs": "^3.0.3",
+    "iron-session": "^8.0.4",
+    "typescript": "^5.4.0"
   }
 }
