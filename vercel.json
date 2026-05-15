@@ -1,9 +1,7 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "api/run-python.py", "use": "@vercel/python" }
-  ],
-  "routes": [
-    { "src": "/api/run-python", "dest": "/api/run-python.py" }
-  ]
+  "functions": {
+    "api/run-python.py": {
+      "runtime": "@vercel/python"
+    }
+  }
 }
