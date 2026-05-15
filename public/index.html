@@ -638,6 +638,66 @@
 
   .btn-logout:hover { color: var(--red); border-color: rgba(255,103,103,0.4); }
 
+  /* ── Language picker modal ── */
+  .lang-picker-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(3px);
+  }
+  .lang-picker-overlay.hidden { display: none; }
+
+  .lang-picker-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 220px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  .lang-picker-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    text-align: center;
+  }
+
+  .lang-picker-options { display: flex; flex-direction: column; gap: 8px; }
+
+  .lang-picker-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    text-align: left;
+    width: 100%;
+  }
+
+  .lang-picker-btn:hover {
+    border-color: rgba(162,119,255,0.5);
+    background: rgba(162,119,255,0.08);
+    color: var(--accent);
+  }
+
+  .lang-picker-icon { font-size: 18px; line-height: 1; }
+
   /* ── Sidebar overlay (mobile) ── */
   .sidebar-overlay {
     display: none;
@@ -698,6 +758,18 @@
 <body>
 
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- Language picker -->
+<div class="lang-picker-overlay hidden" id="lang-picker" role="dialog" aria-modal="true" aria-labelledby="lang-picker-title">
+  <div class="lang-picker-card">
+    <div class="lang-picker-title" id="lang-picker-title">Choose a language</div>
+    <div class="lang-picker-options">
+      <button class="lang-picker-btn" data-lang="javascript"><span class="lang-picker-icon">🟨</span> JavaScript</button>
+      <button class="lang-picker-btn" data-lang="typescript"><span class="lang-picker-icon">🟦</span> TypeScript</button>
+      <button class="lang-picker-btn" data-lang="python"><span class="lang-picker-icon">🐍</span> Python</button>
+    </div>
+  </div>
+</div>
 
 <!-- Auth screen -->
 <div id="auth-screen" role="dialog" aria-modal="true" aria-labelledby="auth-title">
@@ -1200,12 +1272,31 @@ require(['vs/editor/editor.main'], function () {
     }
   }
 
-  document.getElementById('btn-new').addEventListener('click', () => {
-    currentSnippetId = null;
-    document.getElementById('snippet-title').value = '';
-    editor.setValue(templates[currentLang]);
-    renderSnippetList();
+  // ── Language picker ───────────────────────────────────────────────────
+  const langPicker = document.getElementById('lang-picker');
+
+  function showLangPicker() { langPicker.classList.remove('hidden'); }
+  function hideLangPicker()  { langPicker.classList.add('hidden'); }
+
+  langPicker.addEventListener('click', (e) => { if (e.target === langPicker) hideLangPicker(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !langPicker.classList.contains('hidden')) hideLangPicker();
   });
+
+  langPicker.querySelectorAll('.lang-picker-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lang = btn.dataset.lang;
+      hideLangPicker();
+      currentSnippetId = null;
+      document.getElementById('snippet-title').value = '';
+      switchLang(lang);
+      editor.setValue(templates[lang]);
+      renderSnippetList();
+      if (window.innerWidth <= 768) closeSidebar();
+    });
+  });
+
+  document.getElementById('btn-new').addEventListener('click', showLangPicker);
 
   // ── Sidebar toggle ────────────────────────────────────────────────────
   const overlay = document.getElementById('sidebar-overlay');
