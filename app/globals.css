@@ -649,6 +649,40 @@ body {
   input, textarea, select { font-size: 16px !important; }
 }
 
+/* ── Skeleton shimmer ── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--border) 25%, var(--border2) 50%, var(--border) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 4px;
+}
+
+/* Auth card skeleton */
+.auth-skeleton { display: flex; flex-direction: column; gap: 20px; }
+.auth-skeleton-logo  { height: 28px; width: 60%; margin: 0 auto; }
+.auth-skeleton-tabs  { height: 36px; border-radius: 7px; }
+.auth-skeleton-input { height: 40px; border-radius: 6px; }
+.auth-skeleton-btn   { height: 42px; border-radius: 6px; }
+
+/* Snippet list skeleton */
+.snippet-skeleton-folder { padding: 6px 10px; display: flex; flex-direction: column; gap: 8px; }
+.snippet-skeleton-header { height: 14px; width: 80px; }
+.snippet-skeleton-item   { height: 28px; border-radius: 4px; margin-left: 16px; }
+.snippet-skeleton-item:nth-child(2) { width: 85%; }
+.snippet-skeleton-item:nth-child(3) { width: 70%; }
+.snippet-skeleton-item:nth-child(4) { width: 90%; }
+
+/* Output skeleton */
+.output-skeleton { padding: 10px 16px; display: flex; flex-direction: column; gap: 8px; }
+.output-skeleton-line { height: 13px; border-radius: 3px; }
+.output-skeleton-line:nth-child(1) { width: 90%; }
+.output-skeleton-line:nth-child(2) { width: 70%; }
+.output-skeleton-line:nth-child(3) { width: 80%; }
+
 /* ── Loaders & spinners ── */
 .page-loader {
   position: fixed; inset: 0;

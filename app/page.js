@@ -63,6 +63,48 @@ function defineAuraDark(monaco) {
   });
 }
 
+// ── Skeleton blocks ───────────────────────────────────────────────────────────
+function SkeletonAuth() {
+  return (
+    <div id="auth-screen">
+      <div className="auth-card">
+        <div className="auth-skeleton">
+          <div className="skeleton auth-skeleton-logo" />
+          <div className="skeleton auth-skeleton-tabs" />
+          <div className="skeleton auth-skeleton-input" />
+          <div className="skeleton auth-skeleton-input" />
+          <div className="skeleton auth-skeleton-btn" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonSnippets() {
+  return (
+    <>
+      {[0,1,2].map(i => (
+        <div key={i} className="snippet-skeleton-folder">
+          <div className="skeleton snippet-skeleton-header" />
+          <div className="skeleton snippet-skeleton-item" />
+          <div className="skeleton snippet-skeleton-item" />
+          <div className="skeleton snippet-skeleton-item" />
+        </div>
+      ))}
+    </>
+  );
+}
+
+function SkeletonOutput() {
+  return (
+    <div className="output-skeleton">
+      <div className="skeleton output-skeleton-line" />
+      <div className="skeleton output-skeleton-line" />
+      <div className="skeleton output-skeleton-line" />
+    </div>
+  );
+}
+
 // ── Auth screen ───────────────────────────────────────────────────────────────
 function AuthScreen({ onLogin }) {
   const [mode, setMode]   = useState('login');
@@ -89,6 +131,8 @@ function AuthScreen({ onLogin }) {
     }
   }
 
+  if (loading) return <SkeletonAuth />;
+
   return (
     <div id="auth-screen" role="dialog" aria-modal="true" aria-labelledby="auth-title">
       <div className="auth-card">
@@ -110,8 +154,8 @@ function AuthScreen({ onLogin }) {
             onKeyDown={e => e.key==='Enter' && submit()} />
         </div>
         <div className="auth-error" role="alert" aria-live="polite">{error}</div>
-        <button className="auth-submit" onClick={submit} disabled={loading}>
-          {loading ? <span className="btn-spinner" /> : (mode==='login' ? 'Sign in' : 'Create account')}
+        <button className="auth-submit" onClick={submit}>
+          {mode==='login' ? 'Sign in' : 'Create account'}
         </button>
       </div>
     </div>
@@ -138,6 +182,7 @@ export default function Home() {
   const [snippetId,    setSnippetId]    = useState(null);
   const [snippetTitle, setSnippetTitle] = useState('');
   const [snippets,     setSnippets]     = useState([]);
+  const [snippetsLoading, setSnippetsLoading] = useState(false);
   const [folderOpen,   setFolderOpen]   = useState({ javascript:true, typescript:true, python:true });
   const [fontSize,     setFontSize]     = useState(13);
   const [sidebarOpen,  setSidebarOpen]  = useState(true);
@@ -243,11 +288,13 @@ export default function Home() {
 
   // ── Snippets ──────────────────────────────────────────────────────────────
   async function loadSnippets() {
+    setSnippetsLoading(true);
     try {
       const res = await fetch('/api/snippets');
       const data = await res.json();
       setSnippets(Array.isArray(data) ? data : []);
     } catch { setSnippets([]); }
+    finally { setSnippetsLoading(false); }
   }
 
   async function loadSnippet(id) {
@@ -427,7 +474,7 @@ export default function Home() {
         <aside className={`sidebar${isMobile ? (sidebarOpen ? ' open' : '') : (sidebarOpen ? '' : ' collapsed')}`} aria-label="Code snippets">
           <div className="sidebar-header" role="heading" aria-level={2}>Snippets</div>
           <div className="snippet-list" role="list">
-            {FOLDERS.map(({ lang: fl, label, icon }) => {
+            {snippetsLoading ? <SkeletonSnippets /> : FOLDERS.map(({ lang: fl, label, icon }) => {
               const items = snippets.filter(s => s.language === fl);
               const open  = folderOpen[fl];
               return (
@@ -522,8 +569,11 @@ export default function Home() {
               <div className="spacer" />
               <span>{output.time}</span>
             </div>
-            <div className="output-content" role="log" aria-live="polite"
-              dangerouslySetInnerHTML={{ __html: output.html }} />
+            {running
+              ? <SkeletonOutput />
+              : <div className="output-content" role="log" aria-live="polite"
+                  dangerouslySetInnerHTML={{ __html: output.html }} />
+            }
           </section>
         </section>
       </main>
