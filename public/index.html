@@ -650,6 +650,13 @@
     .auth-card    { width: calc(100vw - 32px); }
   }
 
+  /* ── Prevent iOS auto-zoom on input focus (font-size must be >= 16px) ── */
+  @media (max-width: 768px) {
+    input, textarea, select {
+      font-size: 16px !important;
+    }
+  }
+
   /* ── Responsive — phone ── */
   @media (max-width: 480px) {
     .topbar-title { display: none; }
