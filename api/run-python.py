@@ -1,5 +1,5 @@
 from http.server import BaseHTTPRequestHandler
-import subprocess, json, tempfile, os, time
+import subprocess, json, tempfile, os, time, sys
 
 
 class handler(BaseHTTPRequestHandler):
@@ -25,7 +25,7 @@ class handler(BaseHTTPRequestHandler):
                 tmp = f.name
 
             result = subprocess.run(
-                ['python3', tmp],
+                [sys.executable, tmp],
                 capture_output=True,
                 text=True,
                 timeout=9,
